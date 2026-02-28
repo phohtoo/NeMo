@@ -994,7 +994,7 @@ class EnglishPhonemesTokenizer(BaseTokenizer):
                 message = f"Text: [{''.join(g2p_text)}] contains unknown char/phoneme: [{p}]."
                 if raw_text is not None:
                     message += f"Original text: [{raw_text}]. Symbol will be skipped."
-                logging.warning(message)
+                # logging.warning(message)
 
         # Remove trailing spaces
         if ps:
@@ -1175,7 +1175,7 @@ class IPATokenizer(BaseTokenizer):
                 message = f"Text: [{''.join(g2p_text)}] contains unknown char/phoneme: [{p}]."
                 if raw_text is not None:
                     message += f"Original text: [{raw_text}]. Symbol will be skipped."
-                logging.warning(message)
+                # logging.warning(message)
 
         # Remove trailing spaces
         if ps:
@@ -1303,7 +1303,7 @@ class ChinesePhonemesTokenizer(BaseTokenizer):
                 message = f"Text: [{' '.join(g2p_text)}] contains unknown char/phoneme: [{p}]."
                 if raw_text is not None:
                     message += f"Original text: [{raw_text}]. Symbol will be skipped."
-                logging.warning(message)
+                # logging.warning(message)
 
         # Remove trailing spaces
         if ps:
@@ -1413,7 +1413,7 @@ class JapanesePhonemeTokenizer(BaseTokenizer):
                 message = f"Text: [{' '.join(g2p_text)}] contains unknown char/phoneme: [{p}]."
                 if raw_text is not None:
                     message += f"Original text: [{raw_text}]. Symbol will be skipped."
-                logging.warning(message)
+                # logging.warning(message)
 
         # Remove trailing spaces
         if ps:
