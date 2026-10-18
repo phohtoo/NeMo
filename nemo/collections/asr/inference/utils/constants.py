@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +19,7 @@ SMALL_EPSILON = 1e-10
 ROUND_PRECISION = 9
 
 # ASR Preprocessing related constants
-LOG_MEL_ZERO = -16.635
+LOG_MEL_ZERO = -16.635532333438686  # log(2^-24), matches preprocessor output for silence
 
 # Punctuation related constants
 POST_WORD_PUNCTUATION = set(".,?")

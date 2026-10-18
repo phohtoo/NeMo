@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -60,6 +61,33 @@ def bpe_tokenizer(tmp_path_factory):
         bos=True,
         eos=True,
         user_defined_symbols=['\n', '<|im_start|>', '<|im_end|>', '<SPECIAL_10>', '<SPECIAL_11>'],
+    )
+    return SentencePieceTokenizer(str(tmpdir / "tokenizer.model"))
+
+
+@pytest.fixture(scope="session")
+def bpe_tokenizer_with_think(tmp_path_factory):
+    tmpdir = tmp_path_factory.mktemp("bpe_tokenizer_with_think")
+    text_path = tmpdir / "text.txt"
+    text_path.write_text(TOKENIZER_TRAIN_TEXT)
+    create_spt_model(
+        str(text_path),
+        vocab_size=512,
+        sample_size=-1,
+        do_lower_case=False,
+        output_dir=str(tmpdir),
+        remove_extra_whitespaces=True,
+        bos=True,
+        eos=True,
+        user_defined_symbols=[
+            '\n',
+            '<|im_start|>',
+            '<|im_end|>',
+            '<SPECIAL_10>',
+            '<SPECIAL_11>',
+            '<think>',
+            '</think>',
+        ],
     )
     return SentencePieceTokenizer(str(tmpdir / "tokenizer.model"))
 

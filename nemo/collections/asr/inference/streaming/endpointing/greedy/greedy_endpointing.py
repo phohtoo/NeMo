@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -265,7 +266,7 @@ class GreedyEndpointing:
             raise ValueError("Pivot point is out of range")
 
         if search_start_point > pivot_point:
-            raise ValueError("Search start point is greater then pivot_point")
+            raise ValueError("Search start point is greater than pivot_point")
 
         if self.residue_tokens_at_end > 0:
             sequence_length = max(0, sequence_length - self.residue_tokens_at_end)

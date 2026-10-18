@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -407,19 +408,12 @@ class CodecExtractor(pl.LightningModule):
             target_audio_lens = target_audio_lens.to(self.device)
             context_audios = context_audios.to(self.device)
             context_audio_lens = context_audio_lens.to(self.device)
-            # NOTE: we avoided directly calling `self.codec_model.encode()` because it pads audios again.
             with torch.inference_mode():
-                target_audios_encoded, target_audios_encoded_len = self.codec_model.audio_encoder(
+                target_tokens, target_audios_encoded_len = self.codec_model.encode(
                     audio=target_audios, audio_len=target_audio_lens
                 )
-                target_tokens = self.codec_model.quantize(
-                    encoded=target_audios_encoded, encoded_len=target_audios_encoded_len
-                )
-                context_audios_encoded, context_audios_encoded_len = self.codec_model.audio_encoder(
+                context_tokens, context_audios_encoded_len = self.codec_model.encode(
                     audio=context_audios, audio_len=context_audio_lens
-                )
-                context_tokens = self.codec_model.quantize(
-                    encoded=context_audios_encoded, encoded_len=context_audios_encoded_len
                 )
             return {
                 "target_codes": target_tokens.to(dtype=torch.uint16, device="cpu"),

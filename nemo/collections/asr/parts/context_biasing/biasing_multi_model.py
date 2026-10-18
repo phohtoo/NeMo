@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -147,6 +148,19 @@ class GPUBiasingMultiModelBase(abc.ABC, nn.Module):
         """
         pass
 
+    @abstractmethod
+    def get_alphas(self, model_ids: torch.Tensor) -> torch.Tensor:
+        """
+        Return per-stream biasing alpha weights for blank LM scaling.
+
+        Args:
+            model_ids: per-stream model ids [batch_size] (-1 = no biasing for that stream)
+
+        Returns:
+            tensor [batch_size] with alpha per stream (0.0 where model_ids < 0)
+        """
+        pass
+
 
 class GPUBiasingMultiModelReference(GPUBiasingMultiModelBase):
     """Reference implementation (incompatible with CUDA graphs)"""
@@ -225,6 +239,14 @@ class GPUBiasingMultiModelReference(GPUBiasingMultiModelBase):
         return torch.full(
             [batch_size], fill_value=self.bos_state if bos else self.START_STATE, device=device, dtype=torch.long
         )
+
+    def get_alphas(self, model_ids: torch.Tensor) -> torch.Tensor:
+        valid = model_ids >= 0
+        if not self.alphas:
+            return torch.zeros(model_ids.shape[0], device=model_ids.device, dtype=torch.float32)
+        alphas = torch.tensor(self.alphas, device=model_ids.device, dtype=torch.float32)
+        gathered = alphas[model_ids]
+        return torch.where(valid, gathered, torch.zeros_like(gathered))
 
     def advance(
         self, states: torch.Tensor, model_ids: torch.Tensor, eos_id: int | None = None
@@ -540,22 +562,27 @@ class GPUBiasingMultiModel(GPUBiasingMultiModelBase):
         self.model2num_states[model_id] = 0
         self.model2num_arcs[model_id] = 0
         self.model2num_arcs_extended[model_id] = 0
-        # shift model offsets
-        self.model2states_offset[model_id] = 0
-        self.model2arcs_offset[model_id] = 0
-        # shift states and arcs offsets
+        # Shift the offsets of the models that lived after the removed one.
+        # Only ACTIVE models take part in the shift. An unused slot holds offset 0, and 0 is also a
+        # legitimate arena address, so a shift applied to every slot underflows every unused slot to a
+        # negative offset whenever the removed model started at 0. `model2active[model_id]` is already
+        # False here, so the removed model is excluded from the mask and its own offsets are cleared last.
         torch.where(
-            self.model2states_offset < start_state,
-            self.model2states_offset,
+            self.model2active & (self.model2states_offset >= start_state),
             self.model2states_offset - num_states,
+            self.model2states_offset,
             out=self.model2states_offset,
         )
         torch.where(
-            self.model2arcs_offset < start_arc,
-            self.model2arcs_offset,
+            self.model2active & (self.model2arcs_offset >= start_arc),
             self.model2arcs_offset - num_arcs,
+            self.model2arcs_offset,
             out=self.model2arcs_offset,
         )
+
+        # clear the removed model's own offsets last
+        self.model2states_offset[model_id] = 0
+        self.model2arcs_offset[model_id] = 0
 
     def get_init_states(self, batch_size: int, bos=True) -> torch.Tensor:
         """
@@ -574,6 +601,11 @@ class GPUBiasingMultiModel(GPUBiasingMultiModelBase):
         return torch.full(
             [batch_size], fill_value=self.bos_state if bos else self.START_STATE, device=device, dtype=torch.long
         )
+
+    def get_alphas(self, model_ids: torch.Tensor) -> torch.Tensor:
+        valid = model_ids >= 0
+        gathered = self.model2alpha[model_ids]
+        return torch.where(valid, gathered, torch.zeros_like(gathered))
 
     def advance(
         self, states: torch.Tensor, model_ids: torch.Tensor, eos_id: int | None = None

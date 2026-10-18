@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,10 +49,11 @@ def setup_device(device: str, device_id: int | None, compute_dtype: str) -> tupl
             logging.warning(f"Device ID {device_id} is not available. Using GPU 0 instead.")
             device_id = 0
 
-        compute_dtype = COMPUTE_DTYPE_MAP.get(compute_dtype, None)
+        compute_dtype_str = compute_dtype
+        compute_dtype = COMPUTE_DTYPE_MAP.get(compute_dtype_str, None)
         if compute_dtype is None:
             raise ValueError(
-                f"Invalid compute dtype: {compute_dtype}. Must be one of {list(COMPUTE_DTYPE_MAP.keys())}"
+                f"Invalid compute dtype: {compute_dtype_str}. Must be one of {list(COMPUTE_DTYPE_MAP.keys())}"
             )
 
         device_str = f"cuda:{device_id}"

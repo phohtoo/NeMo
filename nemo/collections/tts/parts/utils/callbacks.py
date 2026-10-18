@@ -1,4 +1,5 @@
-# Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2023, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -357,6 +358,7 @@ class AudioCodecArtifactGenerator(ArtifactGenerator):
         audio: Tensor,
         audio_len: Tensor,
         save_input: bool = False,
+        audio_sample_rate: Optional[int] = 22050,
     ):
         """Generate audio artifacts.
 
@@ -367,13 +369,14 @@ class AudioCodecArtifactGenerator(ArtifactGenerator):
             audio: tensor of input audio signals, shape (B, T)
             audio_len: tensor of lengths for each example in the batch, shape (B,)
             save_input: if True, save input audio signals
+            audio_sample_rate: sample rate of the provided audio signals
         """
         if not self.log_audio:
             return []
 
         with torch.no_grad():
             # [B, T]
-            audio_pred, audio_pred_len = model(audio=audio, audio_len=audio_len)
+            audio_pred, audio_pred_len = model(audio=audio, audio_len=audio_len, sample_rate=audio_sample_rate)
 
         audio_artifacts = []
         # Log output audio
@@ -384,7 +387,7 @@ class AudioCodecArtifactGenerator(ArtifactGenerator):
                 id=f"audio_out_{audio_id}",
                 data=audio_pred_i,
                 filepath=audio_pred_path,
-                sample_rate=model.sample_rate,
+                sample_rate=model.output_sample_rate,
             )
             audio_artifacts.append(audio_artifact)
 
@@ -397,7 +400,7 @@ class AudioCodecArtifactGenerator(ArtifactGenerator):
                     id=f"audio_in_{audio_id}",
                     data=audio_in_i,
                     filepath=audio_in_path,
-                    sample_rate=model.sample_rate,
+                    sample_rate=model.output_sample_rate,
                 )
                 audio_artifacts.append(audio_artifact)
 
@@ -483,6 +486,7 @@ class AudioCodecArtifactGenerator(ArtifactGenerator):
             audio=audio,
             audio_len=audio_len,
             save_input=initial_log,
+            audio_sample_rate=model.output_sample_rate,
         )
         image_artifacts = self._generate_images(
             model=model, dataset_names=dataset_names, audio_ids=audio_ids, audio=audio, audio_len=audio_len

@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,11 +14,9 @@
 # limitations under the License.
 from types import SimpleNamespace
 
+import pytest
 from omegaconf import DictConfig
-from peft import PeftModel
 from transformers import Qwen3Config, Qwen3ForCausalLM
-
-from nemo.collections.speechlm2.parts.lora import maybe_install_lora
 
 
 def _make_qwen3_stub():
@@ -50,7 +49,21 @@ def _make_qwen3_stub():
     )
 
 
+def _import_peft_lora_dependencies():
+    """Import peft-dependent symbols, skipping when CI has an older torchao stack."""
+    try:
+        from peft import PeftModel
+        from peft.tuners.lora.torchao import dispatch_torchao  # noqa: F401
+        from nemo.collections.speechlm2.parts.lora import maybe_install_lora
+    except ImportError as e:
+        if "torchao" in str(e).lower():
+            pytest.skip(f"peft requires a newer torchao: {e}")
+        raise
+    return PeftModel, maybe_install_lora
+
+
 def test_maybe_install_lora_restores_qwen3_input_embeddings_temporarily():
+    PeftModel, maybe_install_lora = _import_peft_lora_dependencies()
     model = _make_qwen3_stub()
     del model.llm.model.embed_tokens
 

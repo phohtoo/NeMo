@@ -1,4 +1,5 @@
-# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2021, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +24,6 @@ from os import path
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
 
-import hydra
 import torch
 from lightning.pytorch import LightningModule, Trainer
 from lightning.pytorch.utilities import model_summary, rank_zero_only
@@ -31,7 +31,7 @@ from omegaconf import DictConfig, OmegaConf, open_dict
 
 from nemo import package_info
 from nemo.core import optim
-from nemo.core.classes.common import Model
+from nemo.core.classes.common import Model, safe_instantiate
 from nemo.core.classes.module import NeuralModule
 from nemo.core.connectors.save_restore_connector import SaveRestoreConnector
 from nemo.core.optim import prepare_lr_scheduler
@@ -759,7 +759,7 @@ class ModelPT(LightningModule, Model):
                         optimizer_config = {}
                     optimizer_config.update(optimizer_args)
 
-                    optimizer_instance = hydra.utils.instantiate(
+                    optimizer_instance = safe_instantiate(
                         optimizer_cls, self._optimizer_param_groups, **optimizer_config
                     )  # type: DictConfig
 
@@ -783,6 +783,7 @@ class ModelPT(LightningModule, Model):
 
             self._optimizer = optimizer
 
+        optim.patch_flashoptim_uneven_shard_support(self._optimizer)
         self._scheduler = prepare_lr_scheduler(
             optimizer=self._optimizer, scheduler_config=scheduler_config, train_dataloader=self._train_dl
         )
@@ -1939,7 +1940,7 @@ class ModelPT(LightningModule, Model):
 
     def on_train_start(self):
         """PyTorch Lightning hook:
-        https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#on-train-start
+        https://lightning.ai/docs/pytorch/stable/common/hooks
         We use it here to copy the relevant config for dynamic freezing.
         """
 
@@ -1958,7 +1959,7 @@ class ModelPT(LightningModule, Model):
 
     def on_train_batch_start(self, batch: Any, batch_idx: int, unused: int = 0) -> Optional[int]:
         """PyTorch Lightning hook:
-        https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#on-train-batch-start
+        https://lightning.ai/docs/pytorch/stable/common/hooks
         We use it here to enable profiling and dynamic freezing.
         """
         if self.device.type == 'cuda':
@@ -2015,7 +2016,7 @@ class ModelPT(LightningModule, Model):
 
     def on_train_batch_end(self, outputs, batch: Any, batch_idx: int, unused: int = 0) -> None:
         """PyTorch Lightning hook:
-        https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#on-train-batch-end
+        https://lightning.ai/docs/pytorch/stable/common/hooks
         We use it here to enable nsys profiling.
         """
 
@@ -2064,7 +2065,7 @@ class ModelPT(LightningModule, Model):
 
     def on_train_end(self):
         """PyTorch Lightning hook:
-        https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#on-train-end
+        https://lightning.ai/docs/pytorch/stable/common/hooks
         We use it here to cleanup the dynamic freezing config.
         """
 
@@ -2072,14 +2073,14 @@ class ModelPT(LightningModule, Model):
 
     def on_test_end(self):
         """PyTorch Lightning hook:
-        https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#on-test-end
+        https://lightning.ai/docs/pytorch/stable/common/hooks
         """
 
         self._cleanup_on_execution_end()
 
     def on_predict_end(self):
         """PyTorch Lightning hook:
-        https://pytorch-lightning.readthedocs.io/en/stable/common/lightning_module.html#on-test-end
+        https://lightning.ai/docs/pytorch/stable/common/hooks
         """
 
         self._cleanup_on_execution_end()

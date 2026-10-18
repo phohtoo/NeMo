@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +19,7 @@ from .duplex_stt_model import DuplexSTTModel
 from .nemotron_voicechat import NemotronVoiceChat
 from .salm import SALM
 from .salm_asr_decoder import SALMWithAsrDecoder
+from .salm_automodel import SALMAutomodel
 
 __all__ = [
     'DuplexS2SModel',
@@ -25,6 +27,7 @@ __all__ = [
     'DuplexSTTModel',
     'DuplexEARTTS',
     'SALM',
+    'SALMAutomodel',
     'SALMWithAsrDecoder',
     'NemotronVoiceChat',
 ]

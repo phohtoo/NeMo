@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -97,18 +98,21 @@ class TestTemperatureReweighting:
 
     def test_zero_weights_raises_error(self):
         """Zero weights raise ValueError."""
-        with pytest.raises(ValueError, match="must be positive"):
+        with pytest.raises(ValueError, match="must be nonnegative with at least one positive"):
             temperature_reweighting([0, 0, 0], temperature=1.0)
 
     def test_negative_weights_raises_error(self):
         """Negative weights raise ValueError."""
-        with pytest.raises(ValueError, match="must be positive"):
+        with pytest.raises(ValueError, match="must be nonnegative with at least one positive"):
             temperature_reweighting([100, -50, 200], temperature=1.0)
 
-    def test_mixed_zero_positive_raises_error(self):
-        """Mixed zero and positive weights raise ValueError."""
-        with pytest.raises(ValueError, match="must be positive"):
-            temperature_reweighting([100, 0, 200], temperature=1.0)
+    @pytest.mark.parametrize("temperature", [0.0, 0.5, 1.0, 2.0])
+    def test_zero_weight_slots_remain_addressable_and_disabled(self, temperature):
+        result = temperature_reweighting([100, 0, 200, 0], temperature=temperature)
+        assert len(result) == 4
+        assert result[1] == result[3] == 0.0
+        expected = temperature_reweighting([100, 200], temperature=temperature)
+        np.testing.assert_allclose([result[0], result[2]], expected)
 
 
 def make_mock_parser_fn(return_tarred=True):
@@ -398,6 +402,40 @@ class TestCountInputCfgLevels:
                 ]
             }
         )
+        assert count_input_cfg_levels(config) == 2
+
+    def test_string_input_cfg_resolves_yaml_file(self, tmp_path):
+        """String input_cfg pointing to a YAML file is loaded and traversed."""
+        inner_yaml = tmp_path / "inner.yaml"
+        inner_yaml.write_text(
+            "- type: lhotse_shar\n  shar_path: /path1\n  weight: 1.0\n"
+            "- type: lhotse_shar\n  shar_path: /path2\n  weight: 2.0\n"
+        )
+        config = {"input_cfg": str(inner_yaml)}
+        assert count_input_cfg_levels(config) == 1
+
+    def test_two_level_string_input_cfg(self, tmp_path):
+        """Top-level string ref → YAML with groups whose input_cfg are strings."""
+        lang_yaml = tmp_path / "train_lang.yaml"
+        lang_yaml.write_text("- type: lhotse_shar\n  shar_path: /audio/cuts\n  weight: 3.5\n")
+        top_yaml = tmp_path / "train_all.yaml"
+        top_yaml.write_text(
+            f"- type: group\n  weight: 100\n  input_cfg: {lang_yaml}\n"
+            f"- type: group\n  weight: 200\n  input_cfg: {lang_yaml}\n"
+        )
+        config = {"input_cfg": str(top_yaml)}
+        assert count_input_cfg_levels(config) == 2
+
+    def test_unresolvable_nested_string_input_cfg_is_treated_as_leaf(self):
+        """Nested unresolvable string input_cfg is treated as a leaf, so total depth is 2."""
+        config = {
+            "input_cfg": [
+                {
+                    "type": "group",
+                    "input_cfg": "${oc.env:MANIFEST_ROOT}/train_ar-AE.yaml",
+                },
+            ]
+        }
         assert count_input_cfg_levels(config) == 2
 
 

@@ -1,4 +1,5 @@
-# Copyright (c) 2025, NVIDIA CORPORATION.  All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -69,6 +70,11 @@ class CacheAwareStreamingState(StreamingState):
             labels: (list[int]) list of labels
         """
         shift = len(labels)
+        if shift == 0:
+            return
+        if shift >= len(self.label_buffer):
+            self.label_buffer[:] = labels[-len(self.label_buffer) :]
+            return
         self.label_buffer[:-shift] = self.label_buffer[shift:].copy()
         self.label_buffer[-shift:] = labels.copy()
 
